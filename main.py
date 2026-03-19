@@ -31,5 +31,24 @@ class PatchEmbedd(nn.Module):
         x=x.flatten(2).transpose(1,2)
         return x
 #-------------MHA---------------------------------------------#
+class Attention(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.qkv=nn.Linear(EMBED,EMBED*3) #one single linear layer to find all three q, k and v
+        self.proj=nn.Linear(EMBED,EMBED)#output projection
+        self.drop=nn.Dropout(DROP)  
+        self.scale=(EMBED//HEADS)**(-1/2) #scale factor for the softmax
+    def forward(self,x):    # x:B,N,E
+        B,N,E=x.shape
+        qkv = self.qkv(x).reshape(B,N,3, HEADS, E//HEADS)
+        qkv = qkv.permute(2,0,3,1,4)
+        q,k,v = qkv.unbind(0)
+        attn = (q@k.transpose(-2,-1))*self.scale
+        attn=attn.softmax(dim=-1)   
+        attn=self.drop(attn)
+        x= (attn@v).transpose(1,2).reshape(B,N,E)
+        return self.proj(x)
+    
+
 
 
